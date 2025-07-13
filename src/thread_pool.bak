@@ -1,0 +1,109 @@
+use uuid::Uuid;
+use crate::error::*;
+use std::thread;
+
+use crossbeam::channel::{self, Sender, Receiver};
+use parking_lot::Mutex; // ✅ More efficient mutex
+use std::sync::Arc;
+
+type Job = Box<dyn FnOnce() + Send + 'static>;
+
+#[derive(Debug)]
+pub struct Worker {
+    id: Uuid,
+    thread: Option<thread::JoinHandle<()>>,
+}
+
+impl Worker {
+    pub fn new(
+        id: Uuid,
+        receiver: Receiver<Job>,
+        job_counter: Arc<Mutex<usize>>, // ✅ Shared job counter protected by parking_lot::Mutex
+    ) -> Worker {
+        let thread = thread::spawn(move || {
+            loop {
+                match receiver.recv() {
+                    Ok(job) => {
+                        job();
+                        let mut count = job_counter.lock(); // ✅ parking_lot::Mutex lock
+                        *count += 1;
+                        println!("Worker {} completed a job. Total done: {}", id, *count);
+                    }
+                    Err(_) => {
+                        println!("Worker {} disconnected, shutting down...", id);
+                        break;
+                    }
+                }
+            }
+        });
+
+        Worker {
+            id,
+            thread: Some(thread),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ThreadPool {
+    workers: Vec<Worker>,
+    sender: Option<Sender<Job>>,
+    job_counter: Arc<Mutex<usize>>, // ✅ Shared counter
+}
+
+impl ThreadPool {
+    pub fn new(size: usize) -> ThreadPool {
+        assert!(size > 0);
+
+        let (sender, receiver) = channel::unbounded::<Job>();
+        let job_counter = Arc::new(Mutex::new(0)); // ✅ parking_lot Mutex used here
+
+        let mut workers = Vec::with_capacity(size);
+        for _ in 0..size {
+            workers.push(Worker::new(
+                Uuid::new_v4(),
+                receiver.clone(),
+                Arc::clone(&job_counter),
+            ));
+        }
+
+        ThreadPool {
+            sender: Some(sender),
+            workers,
+            job_counter,
+        }
+    }
+
+    pub fn execute<F>(&self, f: F) -> Result<(), ThreadPoolError>
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.sender
+            .as_ref()
+            .ok_or_else(|| ThreadPoolError::SendError("Sender is not initialized".to_string()))?
+            .send(Box::new(f))
+            .map_err(|e| ThreadPoolError::SendError(e.to_string()))
+    }
+
+    pub fn completed_jobs(&self) -> usize {
+        *self.job_counter.lock() // ✅ Access with parking_lot Mutex
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        drop(self.sender.take());
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
+
+        println!(
+            "ThreadPool finished. Total jobs processed: {}",
+            self.completed_jobs()
+        );
+    }
+}

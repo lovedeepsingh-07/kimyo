@@ -1,3 +1,5 @@
+pub(crate) mod thread_pool;
+
 #[cxx::bridge(namespace = "kimyo")]
 mod ffi {
     struct Server {
