@@ -1,3 +1,0 @@
-# Architecture Guide
-
-# Thread Pool
