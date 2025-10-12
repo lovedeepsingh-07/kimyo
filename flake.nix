@@ -10,6 +10,7 @@
       let
         overlays = [ ];
         pkgs = import nixpkgs { inherit system overlays; };
+        deps = import ./deps.nix { inherit pkgs; };
       in {
         formatter = pkgs.nixfmt-classic;
         devShells.default = pkgs.mkShell {
@@ -18,6 +19,13 @@
             pkgs.cmake
             pkgs.gcc
           ];
+        };
+        apps.setup = flake-utils.lib.mkApp {
+          drv = pkgs.writeShellApplication {
+            name = "setup";
+            runtimeInputs = [ ];
+            text = deps.setup_script;
+          };
         };
       });
 }
