@@ -1,4 +1,2 @@
-SERVER_CONFIG = {
-	address = "localhost",
-	port = 9090,
-}
+local web = require("kimyo")
+web.hello_world()
