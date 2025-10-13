@@ -7,4 +7,9 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+color-eyre = "0.6"
 mlua = { version = "0.9", features = ["lua54", "module"] }
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+urlencoding = "2.1"
