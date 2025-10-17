@@ -1,7 +1,8 @@
 use crate::error;
 use color_eyre::eyre::{self, Context};
+use httparse;
 use mlua::prelude::*;
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 
 pub(crate) struct WebServer {
     pub(crate) show_banner: bool,
@@ -34,49 +35,43 @@ impl LuaUserData for WebServer {
         // fields.add_field_method_get("name", |_, this| Ok(this.name.clone()));
     }
     fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("listen", |_, this, ()| {
+        methods.add_method("listen", |_, this, ()| -> LuaResult<()> {
             if this.show_banner == true {
                 tracing::info!("running on {}:{}", this.host, this.port);
             }
 
-            for stream in this.listener.incoming() {
-                let mut stream = stream.unwrap();
+            // for stream in this.listener.incoming() {
+            //     let mut stream = stream.unwrap();
+            //
+            //     let mut request_data: Vec<u8> = Vec::new();
+            //
+            //     let mut read_buffer: [u8; 1024] = [0; 1024];
+            //     loop {
+            //         let bytes_read = stream.read(&mut read_buffer)?;
+            //         if bytes_read == 0 {
+            //             break;
+            //         }
+            //         request_data.extend_from_slice(&read_buffer[..bytes_read]);
+            //
+            //         let mut request_headers = [httparse::EMPTY_HEADER; 64];
+            //         let mut request = httparse::Request::new(&mut request_headers);
+            //         match request
+            //             .parse(&request_data)
+            //             .map_err(|e| error::Error::HttpParseError(e))?
+            //         {
+            //             httparse::Status::Partial => {}
+            //             httparse::Status::Complete(_) => {
+            //                 tracing::info!("{:#?}", request);
+            //                 break;
+            //             }
+            //         };
+            //     }
+            // }
 
-                // parse the request string into a `Request` struct by first parsing the string to a string
-                // vector containling the lines of requests as elements by following cases:-
-                //
-                // - if the headers contain the `Content-Length` header and it's value is more than 0, then
-                //   we properly parse the body too
-                // - if the headers do not contain the `Content-Length` then we stop after parsing
-                let mut request_vector = Vec::new();
-                let mut content_length = 0;
-                let mut buf_reader = BufReader::new(&mut stream);
-                for line in buf_reader.by_ref().lines() {
-                    let line = line?;
-                    match line.strip_prefix("Content-Length: ") {
-                        Some(c_l) => {
-                            content_length = c_l.trim().parse().unwrap();
-                        }
-                        None => {}
-                    }
-                    if line.is_empty() {
-                        request_vector.push(line);
-                        break;
-                    }
-                    request_vector.push(line);
-                }
-                let mut body = Vec::new();
-                if content_length > 0 {
-                    body.resize(content_length, 0);
-                    buf_reader
-                        .take(content_length as u64)
-                        .read_exact(&mut body)?;
-                    request_vector.push(String::from_utf8_lossy(&body).to_string());
-                }
-                tracing::info!("request: {:#?}", request_vector);
-            }
-
-            return Ok(());
+            return Err(mlua::Error::external(error::Error::WebServerError(
+                "shit don't work".to_string(),
+            )));
+            // return Ok(());
         });
     }
 }

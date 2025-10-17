@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 color-eyre = "0.6"
+httparse = "1.10.1"
 mlua = { version = "0.9", features = ["lua54", "module"] }
 thiserror = "2.0"
 tracing = "0.1"
