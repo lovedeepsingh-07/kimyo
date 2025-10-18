@@ -1,15 +1,14 @@
 use color_eyre::{self, eyre};
-use httparse;
 use mlua;
 use thiserror;
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum Error {
+pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
     #[error(transparent)]
-    HttpParseError(#[from] httparse::Error),
+    ParseIntError(#[from] std::num::ParseIntError),
 
     #[error("WebServer error, {0}")]
     WebServerError(String),

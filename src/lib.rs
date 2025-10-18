@@ -1,8 +1,9 @@
 use color_eyre;
 use mlua::prelude::*;
 
-pub(crate) mod error;
-pub(crate) mod server;
+pub mod error;
+pub mod http;
+pub mod server;
 
 #[mlua::lua_module]
 fn kimyo(lua: &Lua) -> LuaResult<LuaTable> {

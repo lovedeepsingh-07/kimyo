@@ -1,18 +1,16 @@
-use crate::error;
+use crate::{error, http};
 use color_eyre::eyre::{self, Context};
-use httparse;
 use mlua::prelude::*;
-use std::io::Read;
 
-pub(crate) struct WebServer {
-    pub(crate) show_banner: bool,
-    pub(crate) host: String,
-    pub(crate) port: u16,
-    pub(crate) listener: std::net::TcpListener,
+pub struct WebServer {
+    pub show_banner: bool,
+    pub host: String,
+    pub port: u16,
+    pub listener: std::net::TcpListener,
 }
 
 impl WebServer {
-    pub(crate) fn new(
+    pub fn new(
         show_banner: bool,
         host: String,
         port: u16,
@@ -40,38 +38,41 @@ impl LuaUserData for WebServer {
                 tracing::info!("running on {}:{}", this.host, this.port);
             }
 
-            // for stream in this.listener.incoming() {
-            //     let mut stream = stream.unwrap();
-            //
-            //     let mut request_data: Vec<u8> = Vec::new();
-            //
-            //     let mut read_buffer: [u8; 1024] = [0; 1024];
-            //     loop {
-            //         let bytes_read = stream.read(&mut read_buffer)?;
-            //         if bytes_read == 0 {
-            //             break;
-            //         }
-            //         request_data.extend_from_slice(&read_buffer[..bytes_read]);
-            //
-            //         let mut request_headers = [httparse::EMPTY_HEADER; 64];
-            //         let mut request = httparse::Request::new(&mut request_headers);
-            //         match request
-            //             .parse(&request_data)
-            //             .map_err(|e| error::Error::HttpParseError(e))?
-            //         {
-            //             httparse::Status::Partial => {}
-            //             httparse::Status::Complete(_) => {
-            //                 tracing::info!("{:#?}", request);
-            //                 break;
-            //             }
-            //         };
-            //     }
-            // }
+            for stream in this.listener.incoming() {
+                let mut stream = stream.unwrap();
+                let req = http::request::Request::new(&mut stream)?;
+                // tracing::info!("{:#?}", req);
+                // loop {
+                //     let bytes_read = stream.read(&mut read_buffer)?;
+                //     if bytes_read == 0 {
+                //         break;
+                //     }
+                //     request_data.extend_from_slice(&read_buffer[..bytes_read]);
+                //
+                //     let mut request_headers = [httparse::EMPTY_HEADER; 64];
+                //     let mut request = httparse::Request::new(&mut request_headers);
+                //                     match request
+                //                         .parse(&request_data)
+                //                         .map_err(|e| error::Error::HttpParseError(e))?
+                //                     {
+                //                         httparse::Status::Partial => {}
+                //                         httparse::Status::Complete(_) => {
+                //                             tracing::info!("request: {}", String::from_utf8_lossy(&request_data));
+                //                             let response_str = String::from(
+                //                                 r#"HTTP/1.1 200 OK
+                // Content-Type: text/html; charset=UTF-8
+                // Content-Length: 12
+                //
+                // Hello, World!"#,
+                //                             );
+                //                             stream.write(response_str.as_bytes())?;
+                //                             break;
+                //                         }
+                //                     };
+                //     }
+            }
 
-            return Err(mlua::Error::external(error::Error::WebServerError(
-                "shit don't work".to_string(),
-            )));
-            // return Ok(());
+            return Ok(());
         });
     }
 }
