@@ -16,14 +16,15 @@ impl WebServer {
         port: u16,
     ) -> eyre::Result<WebServer, error::Error> {
         let listener = std::net::TcpListener::bind(format!("{}:{}", host, port)).wrap_err(
-            error::Error::WebServerError("Failed to create listener".to_string()),
+            error::Error::TcpError("Failed to create listener".to_string()),
         )?;
-        return Ok(WebServer {
+
+        Ok(WebServer {
             show_banner,
             host,
             port,
             listener,
-        });
+        })
     }
 }
 
@@ -40,39 +41,11 @@ impl LuaUserData for WebServer {
 
             for stream in this.listener.incoming() {
                 let mut stream = stream.unwrap();
-                let req = http::request::Request::new(&mut stream)?;
-                // tracing::info!("{:#?}", req);
-                // loop {
-                //     let bytes_read = stream.read(&mut read_buffer)?;
-                //     if bytes_read == 0 {
-                //         break;
-                //     }
-                //     request_data.extend_from_slice(&read_buffer[..bytes_read]);
-                //
-                //     let mut request_headers = [httparse::EMPTY_HEADER; 64];
-                //     let mut request = httparse::Request::new(&mut request_headers);
-                //                     match request
-                //                         .parse(&request_data)
-                //                         .map_err(|e| error::Error::HttpParseError(e))?
-                //                     {
-                //                         httparse::Status::Partial => {}
-                //                         httparse::Status::Complete(_) => {
-                //                             tracing::info!("request: {}", String::from_utf8_lossy(&request_data));
-                //                             let response_str = String::from(
-                //                                 r#"HTTP/1.1 200 OK
-                // Content-Type: text/html; charset=UTF-8
-                // Content-Length: 12
-                //
-                // Hello, World!"#,
-                //                             );
-                //                             stream.write(response_str.as_bytes())?;
-                //                             break;
-                //                         }
-                //                     };
-                //     }
+                let req = http::request::Request::try_from(&mut stream)?;
+                tracing::info!("{:#?}", req);
             }
 
-            return Ok(());
+            Ok(())
         });
     }
 }

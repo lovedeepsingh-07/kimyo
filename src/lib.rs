@@ -22,7 +22,7 @@ fn kimyo(lua: &Lua) -> LuaResult<LuaTable> {
 
         let web_server: server::WebServer =
             server::WebServer::new(show_banner, host, port).unwrap();
-        return Ok(web_server);
+        Ok(web_server)
     })?;
 
     exports.set("create_server", create_server)?;
