@@ -15,22 +15,20 @@
       let
         overlays = [
           (import inputs.rust-overlay)
-          (final-pkgs: prev-pkgs: {
-            lua-pkg = (import ./lua.nix { inherit system; pkgs = prev-pkgs; }).pkg;
-          })
         ];
         pkgs = import inputs.nixpkgs {
           inherit system overlays;
         };
         rust-pkg = pkgs.rust-bin.stable."1.88.0".default;
+        lua-pkg = (import ./lua.nix { inherit system pkgs; }).pkg;
       in
       {
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
-          packages = [
+          nativeBuildInputs = [
             pkgs.just
             rust-pkg
-            pkgs.lua-pkg
+            lua-pkg
           ];
         };
       });

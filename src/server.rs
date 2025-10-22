@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use crate::{error, http};
 use color_eyre::eyre::{self, Context};
 use mlua::prelude::*;
@@ -43,6 +45,8 @@ impl LuaUserData for WebServer {
                 let mut stream = stream.unwrap();
                 let req = http::request::Request::try_from(&mut stream)?;
                 tracing::info!("{:#?}", req);
+                let res = http::response::Response::default();
+                stream.write(res.to_string().as_bytes())?;
             }
 
             Ok(())

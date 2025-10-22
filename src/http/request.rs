@@ -1,5 +1,4 @@
-use crate::error;
-use crate::http;
+use crate::{error, http};
 use color_eyre::eyre;
 use std::io::{BufRead, Read};
 
@@ -48,8 +47,8 @@ impl TryFrom<&mut std::net::TcpStream> for Request {
             buf_reader
                 .take(content_length as u64)
                 .read_exact(&mut body_buffer)?;
+            request_lines_vector.push(String::from_utf8_lossy(&body_buffer).to_string());
         }
-        request_lines_vector.push(String::from_utf8_lossy(&body_buffer).to_string());
 
         // ----- handle empty request ------
         if request_lines_vector.len() == 0 {
@@ -79,13 +78,16 @@ impl TryFrom<&mut std::net::TcpStream> for Request {
             if line.trim().is_empty() {
                 break;
             }
-            let parts = line.split(": ").collect::<Vec<&str>>();
-            if parts.len() != 2 {
-                return Err(error::Error::InvalidRequestHeader(line.to_string()));
+            match line.split_once(":") {
+                Some((key, value)) => {
+                    parsed_request
+                        .headers
+                        .insert(key.trim().to_string(), value.trim().to_string());
+                }
+                None => {
+                    return Err(error::Error::InvalidRequestHeader(line.to_string()));
+                }
             }
-            parsed_request
-                .headers
-                .insert(parts[0].to_string(), parts[1].to_string());
         }
         // parse body
         parsed_request.body = request_lines_iter.next().cloned();
