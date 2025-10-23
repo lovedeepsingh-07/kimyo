@@ -7,6 +7,9 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    #[error(transparent)]
+    LuaError(#[from] mlua::Error),
+
     #[error("TCP error, {0}")]
     TcpError(String),
 
