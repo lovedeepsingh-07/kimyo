@@ -1,17 +1,16 @@
--- local server = await kimyo.create_server({
---     host = "127.0.0.1",
---     port = 8080,
---     show_banner = true
--- })
---
--- await server:listen()
+local server_result = kimyo.server.create({
+	host = "localhost",
+	port = 3000,
+	show_banner = true,
+})
+if not server_result.ok then
+	kimyo.debug.error(server_result.error)
+	return
+end
+local server = server_result.value
 
--- local server_config = { host = "localhost", port = 3000, show_banner = true }
--- local server = kimyo.create_server(server_config)
---
--- local ok, err = pcall(function()
--- 	server:listen()
--- end)
--- if not ok then
--- 	print("listen error: ", err)
--- end
+local listen_result = server:listen()
+if not listen_result.ok then
+	kimyo.debug.error(listen_result.error)
+	return
+end

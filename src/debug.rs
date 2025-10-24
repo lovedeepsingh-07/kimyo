@@ -1,6 +1,7 @@
+use crate::error;
 use mlua::prelude::*;
 
-pub fn debug_table(lua: &Lua) -> LuaResult<LuaTable> {
+pub fn debug_table(lua: &Lua) -> Result<LuaTable, error::Error> {
     let debug_table = lua.create_table()?;
     debug_table.set(
         "info",

@@ -1,4 +1,3 @@
-use color_eyre::{self, eyre};
 use mlua::prelude::*;
 use tokio;
 
@@ -8,8 +7,7 @@ pub mod http;
 pub mod server;
 
 #[tokio::main]
-async fn main() -> eyre::Result<(), error::Error> {
-    color_eyre::install()?;
+async fn main() -> Result<(), error::Error> {
     tracing_subscriber::fmt()
         .with_ansi(true)
         .with_max_level(tracing::Level::INFO)
@@ -19,6 +17,7 @@ async fn main() -> eyre::Result<(), error::Error> {
 
     let kimyo = lua.create_table()?;
     kimyo.set("debug", debug::debug_table(&lua)?)?;
+    kimyo.set("server", server::server_table(&lua)?)?;
     lua.globals().set("kimyo", kimyo)?;
 
     let script = std::fs::read_to_string("main.lua")?;

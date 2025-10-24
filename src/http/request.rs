@@ -1,5 +1,4 @@
 use crate::{error, http};
-use color_eyre::eyre;
 use std::io::{BufRead, Read};
 
 #[derive(Debug)]
@@ -25,7 +24,7 @@ impl Default for Request {
 
 impl TryFrom<&mut std::net::TcpStream> for Request {
     type Error = error::Error;
-    fn try_from(value: &mut std::net::TcpStream) -> eyre::Result<Self, Self::Error> {
+    fn try_from(value: &mut std::net::TcpStream) -> Result<Self, Self::Error> {
         // ------ read the request ------
         let mut buf_reader = std::io::BufReader::new(value);
         let mut request_lines_vector: Vec<String> = Vec::new();
@@ -63,14 +62,16 @@ impl TryFrom<&mut std::net::TcpStream> for Request {
             Some(line) => {
                 let parts = line.split_whitespace().collect::<Vec<&str>>();
                 if parts.len() != 3 {
-                    return Err(error::Error::InvalidRequestLine());
+                    return Err(error::Error::InvalidRequestLine(line.to_string()));
                 }
                 parsed_request.method = http::HttpMethod::from(parts[0]);
                 parsed_request.path = String::from(parts[1]);
                 parsed_request.version = String::from(parts[2]);
             }
             None => {
-                return Err(error::Error::InvalidRequestLine());
+                return Err(error::Error::InvalidRequestLine(
+                    "no request line found".to_string(),
+                ));
             }
         }
         // parse headers

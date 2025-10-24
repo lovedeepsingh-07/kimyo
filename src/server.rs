@@ -1,7 +1,5 @@
 use crate::error;
-use color_eyre::eyre::{self, Context};
 use mlua::prelude::*;
-// use std::io::Write;
 use tokio;
 
 pub struct WebServer {
@@ -16,13 +14,12 @@ impl WebServer {
         show_banner: bool,
         host: String,
         port: u16,
-    ) -> eyre::Result<WebServer, error::Error> {
+    ) -> Result<WebServer, error::Error> {
         let listener = tokio::net::TcpListener::bind(format!("{}:{}", host, port))
             .await
-            .wrap_err(error::Error::TcpError(
-                "Failed to create listener".to_string(),
-            ))?;
-
+            .map_err(|e| {
+                error::Error::TcpError(format!("Failed to create listener: {}", e.to_string()))
+            })?;
         Ok(WebServer {
             show_banner,
             host,
@@ -35,13 +32,18 @@ impl WebServer {
 impl LuaUserData for WebServer {
     fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
         let _ = fields;
-        // fields.add_field_method_get("name", |_, this| Ok(this.name.clone()));
     }
     fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_async_method("listen", |_, this, ()| async move {
-            if this.show_banner == true {
-                println!("running on {}:{}", this.host, this.port);
+        // ------ server:listen ------
+        methods.add_async_method("listen", |lua, this, ()| async move {
+            let result: Result<LuaValue, error::Error> = async move {
+                if this.show_banner == true {
+                    tracing::info!("running on {}:{}", this.host, this.port);
+                }
+                Ok(LuaValue::Nil)
             }
+            .await;
+            Ok(error::lua_result!(lua, result))
 
             // for stream in this.listener.incoming() {
             //     let mut stream = stream.unwrap();
@@ -50,8 +52,31 @@ impl LuaUserData for WebServer {
             //     let res = http::response::Response::default();
             //     stream.write(res.to_string().as_bytes())?;
             // }
-
-            Ok(())
         });
     }
+}
+// ------ server.create ------
+async fn server_create<'a>(
+    _: &'a Lua,
+    server_config: &LuaTable<'a>,
+) -> Result<WebServer, error::Error> {
+    let host: String = server_config.get("host")?;
+    let port: u16 = server_config.get("port")?;
+    let show_banner: bool = server_config.get("show_banner")?;
+
+    let web_server = WebServer::new(show_banner, host, port).await?;
+    Ok(web_server)
+}
+
+// ------ kimyo.server ------
+pub fn server_table(lua: &Lua) -> Result<LuaTable, error::Error> {
+    let server_table = lua.create_table()?;
+    server_table.set(
+        "create",
+        lua.create_async_function(|lua, server_config: LuaTable| async move {
+            let result = server_create(&lua, &server_config).await;
+            Ok(error::lua_result!(lua, result))
+        })?,
+    )?;
+    Ok(server_table)
 }
