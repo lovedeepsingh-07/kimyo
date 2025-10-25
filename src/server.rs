@@ -1,6 +1,6 @@
-use crate::error;
+use crate::{error, http};
 use mlua::prelude::*;
-use tokio;
+use tokio::{self, io::AsyncWriteExt};
 
 pub struct WebServer {
     pub show_banner: bool,
@@ -9,6 +9,7 @@ pub struct WebServer {
     pub listener: tokio::net::TcpListener,
 }
 
+// ------ server ------
 impl WebServer {
     pub async fn new(
         show_banner: bool,
@@ -40,21 +41,40 @@ impl LuaUserData for WebServer {
                 if this.show_banner == true {
                     tracing::info!("running on {}:{}", this.host, this.port);
                 }
-                Ok(LuaValue::Nil)
+                let mut tasks: tokio::task::JoinSet<Result<(), error::Error>> =
+                    tokio::task::JoinSet::new();
+
+                loop {
+                    tokio::select! {
+                        conn = this.listener.accept() => {
+                            let (mut stream,_) = conn?;
+                            tasks.spawn(async move {
+                                let req = http::request::Request::new(&mut stream).await?;
+                                tracing::info!("{:#?}", req);
+                                let res = http::response::Response::default();
+                                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                                stream.write(res.to_string().as_bytes()).await?;
+                                Ok(())
+                            });
+                        }
+                        Some(join_result) = tasks.join_next() => {
+                            let result = join_result.map_err(|e| error::Error::Other(e.to_string()))?;
+                            match result {
+                                Ok(_) => {},
+                                Err(e) => {
+                                    tracing::error!("{:#?}",e);
+                                }
+                            }
+                        }
+                    }
+                };
             }
             .await;
             Ok(error::lua_result!(lua, result))
-
-            // for stream in this.listener.incoming() {
-            //     let mut stream = stream.unwrap();
-            //     let req = http::request::Request::try_from(&mut stream)?;
-            //     tracing::info!("{:#?}", req);
-            //     let res = http::response::Response::default();
-            //     stream.write(res.to_string().as_bytes())?;
-            // }
         });
     }
 }
+
 // ------ server.create ------
 async fn server_create<'a>(
     _: &'a Lua,

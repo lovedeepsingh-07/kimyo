@@ -1,5 +1,8 @@
 use crate::{error, http};
-use std::io::{BufRead, Read};
+use tokio::{
+    self,
+    io::{AsyncBufReadExt, AsyncReadExt},
+};
 
 #[derive(Debug)]
 pub struct Request {
@@ -22,30 +25,35 @@ impl Default for Request {
     }
 }
 
-impl TryFrom<&mut std::net::TcpStream> for Request {
-    type Error = error::Error;
-    fn try_from(value: &mut std::net::TcpStream) -> Result<Self, Self::Error> {
+impl Request {
+    pub async fn new(stream: &mut tokio::net::TcpStream) -> Result<Request, error::Error> {
         // ------ read the request ------
-        let mut buf_reader = std::io::BufReader::new(value);
+        let mut buf_reader = tokio::io::BufReader::new(stream);
         let mut request_lines_vector: Vec<String> = Vec::new();
         let mut content_length = 0;
-        for line in buf_reader.by_ref().lines() {
-            let line = line?;
-            if let Some(content_length_str) = line.strip_prefix("Content-Length: ") {
+        loop {
+            let mut line = String::new();
+            let bytes = buf_reader.read_line(&mut line).await?;
+            if bytes == 0 {
+                break;
+            }
+            let trimmed = line.trim_end().to_string();
+            if let Some(content_length_str) = trimmed.strip_prefix("Content-Length: ") {
                 content_length = content_length_str.parse()?;
             }
-            if line.is_empty() {
+            if trimmed.is_empty() {
                 request_lines_vector.push(String::from(""));
                 break;
             }
-            request_lines_vector.push(line);
+            request_lines_vector.push(trimmed);
         }
         let mut body_buffer: Vec<u8> = Vec::new();
         if content_length > 0 {
             body_buffer.resize(content_length, 0);
             buf_reader
                 .take(content_length as u64)
-                .read_exact(&mut body_buffer)?;
+                .read_exact(&mut body_buffer)
+                .await?;
             request_lines_vector.push(String::from_utf8_lossy(&body_buffer).to_string());
         }
 
