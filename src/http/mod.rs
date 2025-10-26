@@ -1,7 +1,7 @@
 pub mod request;
 pub mod response;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum HttpMethod {
     GET,
     POST,
@@ -24,7 +24,7 @@ impl From<&str> for HttpMethod {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum HttpStatus {
     OK,
     Created,

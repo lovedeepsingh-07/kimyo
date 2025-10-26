@@ -1,15 +1,17 @@
-use crate::{error, http};
+use crate::{error, http, router};
 use mlua::prelude::*;
+use std::sync::Arc;
 use tokio::{self, io::AsyncWriteExt};
 
+// ------ server ------
 pub struct WebServer {
     pub show_banner: bool,
     pub host: String,
     pub port: u16,
     pub listener: tokio::net::TcpListener,
+    pub router: Arc<router::Router>,
 }
 
-// ------ server ------
 impl WebServer {
     pub async fn new(
         show_banner: bool,
@@ -21,11 +23,13 @@ impl WebServer {
             .map_err(|e| {
                 error::Error::TcpError(format!("Failed to create listener: {}", e.to_string()))
             })?;
+        let router = Arc::new(router::Router::new());
         Ok(WebServer {
             show_banner,
             host,
             port,
             listener,
+            router,
         })
     }
 }
@@ -33,6 +37,11 @@ impl WebServer {
 impl LuaUserData for WebServer {
     fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
         let _ = fields;
+        // ------ server.router ------
+        fields.add_field_method_get("router", |_, this| {
+            let router = this.router.clone();
+            return Ok(router);
+        });
     }
     fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
         // ------ server:listen ------
@@ -48,11 +57,10 @@ impl LuaUserData for WebServer {
                     tokio::select! {
                         conn = this.listener.accept() => {
                             let (mut stream,_) = conn?;
+                            let router = this.router.clone();
                             tasks.spawn(async move {
                                 let req = http::request::Request::new(&mut stream).await?;
-                                tracing::info!("{:#?}", req);
-                                let res = http::response::Response::default();
-                                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                                let res = router.handle_request(&req).await;
                                 stream.write(res.to_string().as_bytes()).await?;
                                 Ok(())
                             });
