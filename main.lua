@@ -1,12 +1,16 @@
-package.cpath = package.cpath .. ";./build/?.so"
-local kimyo = require("kimyo")
+local server_result = kimyo.server.create({
+	host = "localhost",
+	port = 3000,
+	show_banner = true,
+})
+if not server_result.ok then
+	kimyo.debug.error(server_result.error)
+	return
+end
+local server = server_result.value
 
-local server_config = { host = "localhost", port = 3000, show_banner = true }
-local server = kimyo.create_server(server_config)
-
-local ok, err = pcall(function()
-	server:listen()
-end)
-if not ok then
-	print("listen error: ", err)
+local listen_result = server:listen()
+if not listen_result.ok then
+	kimyo.debug.error(listen_result.error)
+	return
 end

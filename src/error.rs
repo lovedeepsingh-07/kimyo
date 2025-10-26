@@ -1,4 +1,3 @@
-use color_eyre::{self, eyre};
 use mlua;
 use thiserror;
 
@@ -6,6 +5,9 @@ use thiserror;
 pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    LuaError(#[from] mlua::Error),
 
     #[error("TCP error, {0}")]
     TcpError(String),
@@ -16,18 +18,30 @@ pub enum Error {
     #[error("empty request")]
     EmptyRequestError(),
 
-    #[error("invalid request line")]
-    InvalidRequestLine(),
+    #[error("invalid request line, {0}")]
+    InvalidRequestLine(String),
 
     #[error("invalid request header, {0:#?}")]
     InvalidRequestHeader(String),
 
-    #[error(transparent)]
-    Other(#[from] eyre::Report),
+    #[error("{0}")]
+    Other(String),
 }
 
-impl From<Error> for mlua::Error {
-    fn from(value: Error) -> Self {
-        mlua::Error::external(value)
-    }
+macro_rules! lua_result {
+    ($lua:expr,$input:expr) => {{
+        let result_table = $lua.create_table()?;
+        match $input {
+            Ok(out) => {
+                result_table.set("ok", true)?;
+                result_table.set("value", out)?;
+            }
+            Err(e) => {
+                result_table.set("ok", false)?;
+                result_table.set("error", e.to_string())?;
+            }
+        }
+        result_table
+    }};
 }
+pub(crate) use lua_result;
