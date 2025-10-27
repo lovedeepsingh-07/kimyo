@@ -10,17 +10,18 @@ if not server_result.ok then
 end
 local server = server_result.value
 
--- middleware setup
--- server.router:add_middleware(function(ctx)
--- 	kimyo.debug.info(ctx)
--- end)
+-- middleware
+server.router:middleware(function(ctx)
+	ctx:set_header("X-Custom-Header", "Some-Value")
+	return ctx
+end)
 
--- routes setup
-server.router:add_route("GET", "/", function(ctx)
+-- routes
+server.router:route("GET", "/", function(ctx)
 	ctx:set_body("home page GET handler")
 	return ctx
 end)
-server.router:add_route("POST", "/users", function(ctx)
+server.router:route("POST", "/users", function(ctx)
 	ctx:set_body("users API POST handler")
 	return ctx
 end)

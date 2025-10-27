@@ -1,7 +1,8 @@
 use crate::{error, http};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
-#[derive(Debug)]
+// TODO: maybe we can somehow make sure that we do not use "Clone" here
+#[derive(Debug, Clone)]
 pub struct Request {
     pub method: http::HttpMethod,
     pub path: String,

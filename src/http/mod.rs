@@ -1,6 +1,7 @@
 pub mod request;
 pub mod response;
 
+// TODO: maybe we can somehow make sure that we do not use "Clone" here
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum HttpMethod {
     GET,
@@ -24,6 +25,7 @@ impl From<String> for HttpMethod {
     }
 }
 
+// TODO: maybe we can somehow make sure that we do not use "Clone" here
 #[derive(Debug, Clone)]
 pub enum HttpStatus {
     OK,

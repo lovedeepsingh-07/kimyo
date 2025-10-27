@@ -1,5 +1,6 @@
 use crate::http;
 
+// TODO: maybe we can somehow make sure that we do not use "Clone" here
 #[derive(Debug, Clone)]
 pub struct Response {
     pub status_code: http::HttpStatus,

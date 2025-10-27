@@ -9,6 +9,8 @@ pub struct WebServer {
     pub host: String,
     pub port: u16,
     pub listener: tokio::net::TcpListener,
+    // TODO: what is this "Arc" doing here, think about it, is it the most efficient solution for
+    // this, can something else be better than Arc ?
     pub router: Arc<router::Router>,
 }
 
@@ -43,7 +45,7 @@ impl LuaUserData for WebServer {
         });
     }
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        // ------ server:listen ------
+        // ------ server:listen() ------
         methods.add_async_method("listen", |lua, this, ()| async move {
             let result_lua = lua.clone();
             let result: Result<LuaValue, error::Error> = async move {
@@ -70,6 +72,8 @@ impl LuaUserData for WebServer {
                             match result {
                                 Ok(_) => {},
                                 Err(e) => {
+                                    // TODO: error handling can be better here, maybe we can
+                                    // somehow delegate even this to the lua side
                                     tracing::error!("{:#?}",e);
                                 }
                             }
@@ -80,6 +84,8 @@ impl LuaUserData for WebServer {
                                     break;
                                 },
                                 Err(e) => {
+                                    // TODO: error handling can be better here, maybe we can
+                                    // somehow delegate even this to the lua side
                                     tracing::error!("{:#?}",e);
                                 }
                             }
@@ -94,7 +100,7 @@ impl LuaUserData for WebServer {
     }
 }
 
-// ------ server.create ------
+// ------ server.create(server_config) ------
 async fn server_create(_: &Lua, server_config: &LuaTable) -> Result<WebServer, error::Error> {
     let host: String = server_config.get("host")?;
     let port: u16 = server_config.get("port")?;
