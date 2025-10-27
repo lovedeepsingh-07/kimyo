@@ -1,4 +1,4 @@
-use crate::{error, http, router};
+use crate::{error, router};
 use mlua::prelude::*;
 use std::sync::Arc;
 use tokio::{self, io::AsyncWriteExt};
@@ -35,17 +35,17 @@ impl WebServer {
 }
 
 impl LuaUserData for WebServer {
-    fn add_fields<'lua, F: LuaUserDataFields<'lua, Self>>(fields: &mut F) {
-        let _ = fields;
+    fn add_fields<F: LuaUserDataFields<Self>>(fields: &mut F) {
         // ------ server.router ------
         fields.add_field_method_get("router", |_, this| {
             let router = this.router.clone();
             return Ok(router);
         });
     }
-    fn add_methods<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         // ------ server:listen ------
         methods.add_async_method("listen", |lua, this, ()| async move {
+            let result_lua = lua.clone();
             let result: Result<LuaValue, error::Error> = async move {
                 if this.show_banner == true {
                     tracing::info!("running on {}:{}", this.host, this.port);
@@ -58,9 +58,9 @@ impl LuaUserData for WebServer {
                         conn = this.listener.accept() => {
                             let (mut stream,_) = conn?;
                             let router = this.router.clone();
+                            let task_lua = result_lua.clone();
                             tasks.spawn(async move {
-                                let req = http::request::Request::new(&mut stream).await?;
-                                let res = router.handle_request(&req).await;
+                                let res = router.handle_request(&task_lua, &mut stream).await?;
                                 stream.write(res.to_string().as_bytes()).await?;
                                 Ok(())
                             });
@@ -74,8 +74,19 @@ impl LuaUserData for WebServer {
                                 }
                             }
                         }
+                        exit_signal = tokio::signal::ctrl_c() => {
+                            match exit_signal{
+                                Ok(()) => {
+                                    break;
+                                },
+                                Err(e) => {
+                                    tracing::error!("{:#?}",e);
+                                }
+                            }
+                        }
                     }
                 };
+                Ok(LuaValue::Nil)
             }
             .await;
             Ok(error::lua_result!(lua, result))
@@ -84,10 +95,7 @@ impl LuaUserData for WebServer {
 }
 
 // ------ server.create ------
-async fn server_create<'a>(
-    _: &'a Lua,
-    server_config: &LuaTable<'a>,
-) -> Result<WebServer, error::Error> {
+async fn server_create(_: &Lua, server_config: &LuaTable) -> Result<WebServer, error::Error> {
     let host: String = server_config.get("host")?;
     let port: u16 = server_config.get("port")?;
     let show_banner: bool = server_config.get("show_banner")?;

@@ -1,8 +1,5 @@
 use crate::{error, http};
-use tokio::{
-    self,
-    io::{AsyncBufReadExt, AsyncReadExt},
-};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
 #[derive(Debug)]
 pub struct Request {
@@ -72,7 +69,7 @@ impl Request {
                 if parts.len() != 3 {
                     return Err(error::Error::InvalidRequestLine(line.to_string()));
                 }
-                parsed_request.method = http::HttpMethod::from(parts[0]);
+                parsed_request.method = http::HttpMethod::from(parts[0].to_string());
                 parsed_request.path = String::from(parts[1]);
                 parsed_request.version = String::from(parts[2]);
             }

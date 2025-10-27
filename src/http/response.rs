@@ -1,6 +1,6 @@
 use crate::http;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Response {
     pub status_code: http::HttpStatus,
     pub headers: std::collections::HashMap<String, String>,

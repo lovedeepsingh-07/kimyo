@@ -10,9 +10,9 @@ pub enum HttpMethod {
     DELETE,
     Other(String),
 }
-impl From<&str> for HttpMethod {
-    fn from(value: &str) -> Self {
-        let return_value = match value {
+impl From<String> for HttpMethod {
+    fn from(value: String) -> Self {
+        let return_value = match value.as_str() {
             "GET" => HttpMethod::GET,
             "POST" => HttpMethod::POST,
             "PUT" => HttpMethod::PUT,
@@ -24,7 +24,7 @@ impl From<&str> for HttpMethod {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HttpStatus {
     OK,
     Created,
