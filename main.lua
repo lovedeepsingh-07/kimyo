@@ -12,17 +12,18 @@ local server = server_result.value
 
 -- middleware
 server.router:middleware(function(ctx)
-	ctx:set_header("X-Custom-Header", "Some-Value")
+	ctx:set_res_header("X-Custom-Header", "Some-Value")
 	return ctx
 end)
 
 -- routes
 server.router:route("GET", "/", function(ctx)
-	ctx:set_body("home page GET handler")
+	ctx:set_res_status(500)
+	ctx:send_string("users API GET handler")
 	return ctx
 end)
 server.router:route("POST", "/users", function(ctx)
-	ctx:set_body("users API POST handler")
+	ctx:send_string("users API GET handler")
 	return ctx
 end)
 

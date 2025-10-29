@@ -1,9 +1,10 @@
-use crate::http;
+use crate::http::status;
+use mlua::prelude::*;
 
 // TODO: maybe we can somehow make sure that we do not use "Clone" here
 #[derive(Debug, Clone)]
 pub struct Response {
-    pub status_code: http::HttpStatus,
+    pub status_code: status::HttpStatus,
     pub headers: std::collections::HashMap<String, String>,
     pub body: String,
 }
@@ -11,7 +12,7 @@ pub struct Response {
 impl Default for Response {
     fn default() -> Self {
         Response {
-            status_code: http::HttpStatus::OK,
+            status_code: status::HttpStatus::OK,
             headers: std::collections::HashMap::new(),
             body: String::new(),
         }
@@ -42,3 +43,5 @@ impl ToString for Response {
         output_string
     }
 }
+
+impl LuaUserData for Response {}

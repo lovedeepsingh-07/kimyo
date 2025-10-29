@@ -1,6 +1,6 @@
 use crate::{
     context, error,
-    http::{self, request, response},
+    http::{method, request, response, status},
 };
 use mlua::prelude::*;
 use std::collections::HashMap;
@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct RouteKey {
     pub path: String,
-    pub method: http::HttpMethod,
+    pub method: method::HttpMethod,
 }
 
 // ------ router ------
@@ -51,19 +51,15 @@ impl Router {
             path: ctx.req.path.clone(),
             method: ctx.req.method.clone(),
         };
-        match routes.get(&route_key) {
-            Some(route) => {
-                let route_handler: LuaFunction = lua.registry_value(route)?;
-                let out_ctx: LuaAnyUserData = route_handler.call_async(ctx).await?;
-                let out = out_ctx.borrow::<context::Context>()?;
-                return Ok(out.res.clone());
-            }
-            None => {
-                tracing::warn!("no route found, {:#?}", &route_key);
-            }
+        if let Some(route) = routes.get(&route_key) {
+            let route_handler: LuaFunction = lua.registry_value(route)?;
+            let lua_out: LuaAnyUserData = route_handler.call_async(ctx).await?;
+            let out = lua_out.borrow::<context::Context>()?;
+            return Ok(out.res.clone());
         }
 
-        Ok(response::Response::default())
+        ctx.res.status_code = status::HttpStatus::NotFound;
+        Ok(ctx.res)
     }
 }
 
@@ -72,12 +68,12 @@ impl LuaUserData for Router {
         let _ = fields;
     }
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        // ------ router:route(method,path,handler) ------
+        // ------ router:route(method,path,(handler(ctx) -> ctx)) ------
         methods.add_async_method(
             "route",
             |lua, this, (method, path, handler): (LuaString, LuaString, LuaFunction)| async move {
                 let route_path = path.to_str()?;
-                let route_method = http::HttpMethod::from(method.to_str()?.to_string());
+                let route_method = method::HttpMethod::from(method.to_str()?.to_string());
                 let route_handler = lua.create_registry_value(handler)?;
 
                 let route_key = RouteKey {

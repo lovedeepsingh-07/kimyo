@@ -2,12 +2,13 @@
   description = "kimyo";
   inputs = {
     nixpkgs.url =
-      "github:nixos/nixpkgs/ca77296380960cd497a765102eeb1356eb80fed0";
+      "github:nixos/nixpkgs/d2ed99647a4b195f0bcc440f76edfa10aeb3b743";
+    flake-utils.url =
+      "github:numtide/flake-utils/11707dc2f618dd54ca8739b309ec4fc024de578b";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
   };
   outputs = { ... }@inputs:

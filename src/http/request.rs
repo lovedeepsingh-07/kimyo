@@ -1,10 +1,10 @@
-use crate::{error, http};
+use crate::{error, http::method};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
 // TODO: maybe we can somehow make sure that we do not use "Clone" here
 #[derive(Debug, Clone)]
 pub struct Request {
-    pub method: http::HttpMethod,
+    pub method: method::HttpMethod,
     pub path: String,
     pub version: String,
     pub headers: std::collections::HashMap<String, String>,
@@ -14,7 +14,7 @@ pub struct Request {
 impl Default for Request {
     fn default() -> Self {
         Request {
-            method: http::HttpMethod::GET,
+            method: method::HttpMethod::GET,
             path: String::from("/"),
             version: String::from("HTTP/1.1"),
             headers: std::collections::HashMap::new(),
@@ -70,7 +70,7 @@ impl Request {
                 if parts.len() != 3 {
                     return Err(error::Error::InvalidRequestLine(line.to_string()));
                 }
-                parsed_request.method = http::HttpMethod::from(parts[0].to_string());
+                parsed_request.method = method::HttpMethod::from(parts[0].to_string());
                 parsed_request.path = String::from(parts[1]);
                 parsed_request.version = String::from(parts[2]);
             }

@@ -24,6 +24,9 @@ pub enum Error {
     #[error("invalid request header, {0:#?}")]
     InvalidRequestHeader(String),
 
+    #[error("invalid status code, {0:#?}")]
+    InvalidStatusCode(String),
+
     #[error("{0}")]
     Other(String),
 }

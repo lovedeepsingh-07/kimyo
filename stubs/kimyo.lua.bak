@@ -1,0 +1,29 @@
+---@meta
+
+---@class kimyo_debug_module
+---@field info fun(message: string): nil
+---@field warn fun(message: string): nil
+---@field error fun(message: string): nil
+
+---@class kimyo_server_module
+---@field create fun(options: { host: string, port: integer, show_banner: boolean }): { ok: boolean, value: kimyo_server, error: string }
+
+---@class kimyo_server
+---@field router kimyo_router
+---@field listen fun(self: kimyo_server): { ok: boolean, error: string }
+
+---@class kimyo_router
+---@field middleware fun(self: kimyo_router, handler: fun(ctx: kimyo_context): kimyo_context): nil
+---@field route fun(self: kimyo_router, method: string, path: string, handler: fun(ctx: kimyo_context): kimyo_context): nil
+
+---@class kimyo_context
+---@field set_status fun(self: kimyo_context, status: integer): nil
+---@field send_string fun(self: kimyo_context, body: string): nil
+---@field set_headers fun(self: kimyo_context, key: string, value: string): nil
+
+---@class kimyo
+---@field debug kimyo_debug_module
+---@field server kimyo_server_module
+
+---@type kimyo
+kimyo = {}
