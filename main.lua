@@ -1,4 +1,4 @@
--- server setup
+-- server
 local server_result = kimyo.server.create({
 	host = "localhost",
 	port = 3000,
@@ -10,6 +10,10 @@ if not server_result.ok then
 end
 local server = server_result.value
 
+server.router:internal_error_handler(function(err, ctx)
+	return ctx
+end)
+
 -- middleware
 server.router:middleware(function(ctx)
 	ctx:set_res_header("X-Custom-Header", "Some-Value")
@@ -18,8 +22,8 @@ end)
 
 -- routes
 server.router:route("GET", "/", function(ctx)
-	ctx:set_res_status(500)
-	ctx:send_string("users API GET handler")
+	-- ctx:set_res_statu()
+	ctx:send_string("hello, world!")
 	return ctx
 end)
 server.router:route("POST", "/users", function(ctx)

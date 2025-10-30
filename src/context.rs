@@ -37,13 +37,23 @@ impl LuaUserData for Context {
             },
         );
         // ------ context:send_string(input) ------
-        methods.add_async_method_mut("send_string", |_, mut this, input: LuaString| async move {
-            let input_str = input.to_str()?.to_string();
-            this.res
-                .headers
-                .insert("Content-Type".to_string(), "text/plain".to_string());
-            this.res.body = input_str;
-            Ok(())
-        });
+        methods.add_async_method_mut(
+            "send_string",
+            |_, mut this, input: Option<LuaString>| async move {
+                if let Some(input_str) = input {
+                    this.res
+                        .headers
+                        .insert("Content-Type".to_string(), "text/plain".to_string());
+                    this.res.body = input_str.to_str()?.to_string();
+                } else {
+                    this.res.status_code = status::HttpStatus::InternalServerError;
+                    this.res
+                        .headers
+                        .insert("Content-Type".to_string(), "text/plain".to_string());
+                    this.res.body = String::from("Internal Server Error");
+                }
+                Ok(())
+            },
+        );
     }
 }

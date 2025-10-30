@@ -1,6 +1,7 @@
 use mlua;
 use thiserror;
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]

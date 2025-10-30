@@ -8,15 +8,7 @@ pub mod http;
 pub mod router;
 pub mod server;
 
-#[tokio::main]
-async fn main() -> Result<(), error::Error> {
-    tracing_subscriber::fmt()
-        .with_ansi(true)
-        .with_max_level(tracing::Level::INFO)
-        .init();
-
-    let lua = Lua::new();
-
+async fn main_code(lua: &Lua) -> Result<(), error::Error> {
     let kimyo = lua.create_table()?;
     kimyo.set("debug", debug::debug_table(&lua)?)?;
     kimyo.set("server", server::server_table(&lua)?)?;
@@ -25,4 +17,20 @@ async fn main() -> Result<(), error::Error> {
     let script = std::fs::read_to_string("main.lua")?;
     lua.load(&script).set_name("main.lua").exec_async().await?;
     Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_ansi(true)
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    let lua = Lua::new();
+    match main_code(&lua).await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::error!("(main.rs): {}", e.to_string());
+        }
+    }
 }

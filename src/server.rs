@@ -74,7 +74,7 @@ impl LuaUserData for WebServer {
                                 Err(e) => {
                                     // TODO: error handling can be better here, maybe we can
                                     // somehow delegate even this to the lua side
-                                    tracing::error!("{:#?}",e);
+                                    tracing::error!("(server.rs, 1): {}",e.to_string());
                                 }
                             }
                         }
@@ -86,7 +86,7 @@ impl LuaUserData for WebServer {
                                 Err(e) => {
                                     // TODO: error handling can be better here, maybe we can
                                     // somehow delegate even this to the lua side
-                                    tracing::error!("{:#?}",e);
+                                    tracing::error!("(server.rs, 2): {}",e.to_string());
                                 }
                             }
                         }
