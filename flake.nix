@@ -21,9 +21,10 @@
           inherit system overlays;
         };
         rust-pkg = pkgs.rust-bin.stable."1.88.0".default;
+        crane-lib = (inputs.crane.mkLib pkgs).overrideToolchain rust-pkg;
         lua-pkg = (import ./lua.nix { inherit system pkgs; }).pkg;
       in
-      {
+      rec {
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
@@ -31,6 +32,15 @@
             rust-pkg
             lua-pkg
           ];
+        };
+        packages.default =
+          crane-lib.buildPackage {
+            src = crane-lib.cleanCargoSource ./.;
+            strictDeps = true;
+          };
+        apps.default = {
+          type = "app";
+          program = "${packages.default}/bin/kimyo";
         };
       });
 }

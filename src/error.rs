@@ -32,6 +32,24 @@ pub enum Error {
     Other(String),
 }
 
+impl Error {
+    pub fn into_lua_table(&self, lua: &mlua::Lua) -> mlua::Table {
+        let table = match lua.create_table() {
+            Ok(out) => out,
+            Err(e) => {
+                return Error::from(e).into_lua_table(lua);
+            }
+        };
+        match table.set("message", self.to_string()) {
+            Ok(_) => {}
+            Err(e) => {
+                return Error::from(e).into_lua_table(lua);
+            }
+        };
+        return table;
+    }
+}
+
 macro_rules! lua_result {
     ($lua:expr,$input:expr) => {{
         let result_table = $lua.create_table()?;

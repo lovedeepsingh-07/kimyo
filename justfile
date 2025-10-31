@@ -5,6 +5,4 @@ build:
 	@cargo build --release
 run:
 	@echo "------ executing ------"
-	@cargo run --release
-
-# @lua main.lua
+	@cargo run --release -- ./examples

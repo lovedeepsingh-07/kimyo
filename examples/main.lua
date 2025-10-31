@@ -10,7 +10,11 @@ if not server_result.ok then
 end
 local server = server_result.value
 
+-- internal error handler
 server.router:internal_error_handler(function(err, ctx)
+	kimyo.debug.error(err.message)
+	ctx:set_res_status(500)
+	ctx:send_string("Something went so wrong, that I can't even tell you about it!")
 	return ctx
 end)
 
@@ -22,7 +26,8 @@ end)
 
 -- routes
 server.router:route("GET", "/", function(ctx)
-	-- ctx:set_res_statu()
+	ctx:set_res_status(200)
+	ctx:set_res_header("Content-Type", "text/plain")
 	ctx:send_string("hello, world!")
 	return ctx
 end)

@@ -1,35 +1,36 @@
 ---@meta
 
----Debug utilities for logging information, warnings, and errors.
+---debug utilities for logging information, warnings, and errors.
 ---@class kimyo_debug_module
----@field info fun(message: string): nil @Logs an informational message.
----@field warn fun(message: string): nil @Logs a warning message.
----@field error fun(message: string): nil @Logs an error message.
+---@field info fun(message: string): nil @logs an informational message.
+---@field warn fun(message: string): nil @logs a warning message.
+---@field error fun(message: string): nil @logs an error message.
 
----Module for creating and managing HTTP servers.
+---module for creating and managing http servers.
 ---@class kimyo_server_module
----@field create fun(options: { host: string, port: integer, show_banner: boolean }): { ok: boolean, value: kimyo_server, error: string } @Creates a new server instance with the given options.
+---@field create fun(options: { host: string, port: integer, show_banner: boolean }): { ok: boolean, value: kimyo_server, error: string } @creates a new server instance with the given options.
 
----Represents an active HTTP server instance.
+---represents an active http server instance.
 ---@class kimyo_server
----@field router kimyo_router @Router associated with this server.
----@field listen fun(self: kimyo_server): { ok: boolean, error: string } @Starts listening for incoming HTTP connections.
+---@field router kimyo_router @router associated with this server.
+---@field listen fun(self: kimyo_server): { ok: boolean, error: string } @starts listening for incoming http connections.
 
----Handles routing and middleware for an HTTP server.
+---handles routing and middleware for an http server.
 ---@class kimyo_router
----@field middleware fun(self: kimyo_router, handler: fun(ctx: kimyo_context): kimyo_context): nil @Registers a middleware function that runs before routes.
----@field route fun(self: kimyo_router, method: string, path: string, handler: fun(ctx: kimyo_context): kimyo_context): nil @Registers a route handler for a given HTTP method and path.
+---@field internal_error_handler fun(self: kimyo_router, handler: fun(err: { message: string }, ctx: kimyo_context): kimyo_context): nil @registers a handler that allows you to handle errors before generating responses.
+---@field middleware fun(self: kimyo_router, handler: fun(ctx: kimyo_context): kimyo_context): nil @registers a middleware function that runs before routes.
+---@field route fun(self: kimyo_router, method: string, path: string, handler: fun(ctx: kimyo_context): kimyo_context): nil @registers a route handler for a given http method and path.
 
----Represents a request/response context used inside route and middleware handlers.
+---represents a request/response context used inside route and middleware handlers.
 ---@class kimyo_context
----@field set_res_header fun(self: kimyo_context, key: string, value: string): nil @Sets a response header.
----@field set_res_status fun(self: kimyo_context, status: integer): nil @Sets the HTTP status code for the response.
----@field send_string fun(self: kimyo_context, body: string): nil @Sends a plain text response to the client.
+---@field set_res_header fun(self: kimyo_context, key: string, value: string): nil @sets a response header.
+---@field set_res_status fun(self: kimyo_context, status: integer): nil @sets the http status code for the response.
+---@field send_string fun(self: kimyo_context, body: string): nil @sends a plain text response to the client.
 
----Global entry point for the Kimyo API.
+---global entry point for the kimyo API.
 ---@class kimyo
----@field debug kimyo_debug_module @Debug module for logging.
----@field server kimyo_server_module @Server module for creating HTTP servers.
+---@field debug kimyo_debug_module @debug module for logging.
+---@field server kimyo_server_module @server module for creating http servers.
 
 ---@type kimyo
 kimyo = {}

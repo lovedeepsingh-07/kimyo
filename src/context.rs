@@ -41,9 +41,6 @@ impl LuaUserData for Context {
             "send_string",
             |_, mut this, input: Option<LuaString>| async move {
                 if let Some(input_str) = input {
-                    this.res
-                        .headers
-                        .insert("Content-Type".to_string(), "text/plain".to_string());
                     this.res.body = input_str.to_str()?.to_string();
                 } else {
                     this.res.status_code = status::HttpStatus::InternalServerError;

@@ -35,31 +35,43 @@ impl Router {
         err: LuaError,
         ctx: &context::Context,
     ) -> response::Response {
-        let handler_option = self.internal_error_handler.read().await;
-        // let handler_opt = self.error_handler.read().await.clone();
-        // if let Some(key) = handler_opt {
-        //     let handler: LuaFunction = lua.registry_value(&key)?;
-        //     // Call Lua error handler with (err, ctx)
-        //     match handler.call_async::<_, LuaAnyUserData>((err.to_string(), ctx.clone())).await {
-        //         Ok(out_ctx) => {
-        //             let ctx_ref = out_ctx.borrow::<context::Context>()?;
-        //             return Ok(ctx_ref.res.clone());
-        //         }
-        //         Err(lua_err) => {
-        //             // Even the error handler failed; fall through to fallback
-        //             tracing::error!("Error in error handler: {}", lua_err);
-        //         }
-        //     }
-        // }
-        //
-        // // Default fallback: generic 500 response
-        // let mut error_res = response::Response::default();
-        // error_res.status_code = status::HttpStatus::InternalServerError;
-        // error_res.body = "Internal Server Error".to_string();
-        // tracing::error!("Unhandled Lua error: {}", err);
-        // Ok(error_res)
         let mut err_res = response::Response::default();
         err_res.status_code = status::HttpStatus::InternalServerError;
+        err_res.body = String::from("Something went wrong!");
+
+        let handler_option = self.internal_error_handler.read().await;
+        if let Some(key) = handler_option.as_ref() {
+            let handler: LuaFunction = match lua.registry_value(&key) {
+                Ok(out) => out,
+                Err(e) => {
+                    tracing::error!("(router.rs, 1): {}", e.to_string());
+                    return err_res;
+                }
+            };
+            match handler
+                .call_async::<LuaAnyUserData>((
+                    error::Error::from(err).into_lua_table(lua),
+                    ctx.clone(),
+                ))
+                .await
+            {
+                Ok(out_ctx) => {
+                    let ctx_ref = match out_ctx.borrow::<context::Context>() {
+                        Ok(out) => out,
+                        Err(e) => {
+                            tracing::error!("(router.rs, 2): {}", e.to_string());
+                            return err_res;
+                        }
+                    };
+                    return ctx_ref.res.clone();
+                }
+                Err(e) => {
+                    tracing::error!("(router.rs, 3): {}", e.to_string());
+                    return err_res;
+                }
+            };
+        }
+
         err_res
     }
     // TODO: improve space efficiency here, alot of cloning is happening
