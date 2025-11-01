@@ -2,9 +2,9 @@
 
 ---debug utilities for logging information, warnings, and errors.
 ---@class kimyo_debug_module
----@field info fun(message: string): nil @logs an informational message.
----@field warn fun(message: string): nil @logs a warning message.
----@field error fun(message: string): nil @logs an error message.
+---@field info fun(message: any): nil @logs an informational message.
+---@field warn fun(message: any): nil @logs a warning message.
+---@field error fun(message: any): nil @logs an error message.
 
 ---module for creating and managing http servers.
 ---@class kimyo_server_module
@@ -23,6 +23,9 @@
 
 ---represents a request/response context used inside route and middleware handlers.
 ---@class kimyo_context
+---@field get_path_param fun(self: kimyo_context, key: string): { none: boolean, value: string } @gets the path parameter from request URL
+---@field get_query_param_list fun(self: kimyo_context): {} @gets all the query parameters from request URL
+---@field get_query_param fun(self: kimyo_context, key: string):{ none: boolean, value: string } @gets the query parameter from request URL
 ---@field set_res_header fun(self: kimyo_context, key: string, value: string): nil @sets a response header.
 ---@field set_res_status fun(self: kimyo_context, status: integer): nil @sets the http status code for the response.
 ---@field send_string fun(self: kimyo_context, body: string): nil @sends a plain text response to the client.

@@ -5,6 +5,7 @@ use crate::{
 use mlua::prelude::*;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
+use urlencoding;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct RouteKey {
@@ -84,6 +85,8 @@ impl Router {
         let mut ctx = context::Context {
             req: request,
             res: response::Response::default(),
+            path_params: HashMap::new(),
+            query_params: HashMap::new(),
         };
 
         let middleware_list = self.middleware_list.read().await;
@@ -92,39 +95,66 @@ impl Router {
             let out_ctx: LuaAnyUserData = match handler.call_async(ctx.clone()).await {
                 Ok(out) => out,
                 Err(e) => {
-                    // tracing::error!("(router.rs, 1): {}", e.to_string());
-                    // let mut error_res = response::Response::default();
-                    // error_res.status_code = status::HttpStatus::InternalServerError;
-                    // error_res.body = e.to_string();
                     return Ok(self.handle_internal_error(&lua, e, &ctx).await);
                 }
             };
             ctx = out_ctx.borrow::<context::Context>()?.clone();
         }
 
+        // extract query parameters (if any)
+        self.extract_query_parameters(&mut ctx);
+
         let routes = self.routes.read().await;
         let route_key = RouteKey {
             path: ctx.req.path.clone(),
             method: ctx.req.method.clone(),
         };
+        // matching for exact route definitions
         if let Some(route) = routes.get(&route_key) {
             let route_handler: LuaFunction = lua.registry_value(route)?;
             let lua_out: LuaAnyUserData = match route_handler.call_async(ctx.clone()).await {
                 Ok(out) => out,
                 Err(e) => {
-                    // tracing::error!("(router.rs, 2): {}", e.to_string());
-                    // let mut error_res = response::Response::default();
-                    // error_res.status_code = status::HttpStatus::InternalServerError;
-                    // error_res.body = e.to_string();
                     return Ok(self.handle_internal_error(&lua, e, &ctx).await);
                 }
             };
             let out = lua_out.borrow::<context::Context>()?;
             return Ok(out.res.clone());
         }
-
+        // matching for dynamic route definitions
+        return Ok(self.match_dynamic_route(&mut ctx));
+    }
+    pub fn extract_query_parameters(&self, ctx: &mut context::Context) {
+        let req_path = match urlencoding::decode(&ctx.req.path) {
+            Ok(out) => out,
+            Err(e) => {
+                tracing::warn!("(router.rs, 4): {}", e.to_string());
+                return;
+            }
+        }
+        .to_string();
+        let path_parts = match req_path.split_once("?") {
+            Some(out) => out,
+            None => {
+                return;
+            }
+        };
+        ctx.req.path = path_parts.0.to_string();
+        let param_list = path_parts.1.split("&").collect::<Vec<&str>>();
+        for curr_param in param_list {
+            let param_parts = match curr_param.split_once("=") {
+                Some(out) => out,
+                None => {
+                    return;
+                }
+            };
+            ctx.query_params
+                .insert(param_parts.0.to_string(), param_parts.1.to_string());
+        }
+    }
+    pub fn match_dynamic_route(&self, ctx: &mut context::Context) -> response::Response {
         ctx.res.status_code = status::HttpStatus::NotFound;
-        Ok(ctx.res)
+        ctx.res.clone()
     }
 }
 

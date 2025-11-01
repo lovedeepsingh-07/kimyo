@@ -27,11 +27,42 @@ end)
 -- routes
 server.router:route("GET", "/", function(ctx)
 	ctx:set_res_status(200)
-	ctx:set_res_header("Content-Type", "text/plain")
-	ctx:send_string("hello, world!")
+	ctx:set_res_header("Content-Type", "text/html")
+	ctx:send_string([[<html>
+<head><title>kimyo</title></head>
+<body>
+<h1>hello, world!</h1>
+</body>
+</html>]])
 	return ctx
 end)
-server.router:route("POST", "/users", function(ctx)
+server.router:route("GET", "/api/users", function(ctx)
+	kimyo.debug.info(ctx:get_query_param_list())
+	local query_param_opt = ctx:get_query_param("name")
+	if not query_param_opt.none then
+		kimyo.debug.info(query_param_opt.value)
+	else
+		kimyo.debug.warn("no query param named 'name'")
+	end
+
+	ctx:send_string("users API GET handler")
+	return ctx
+end)
+server.router:route("GET", "/api/users/{user_id}", function(ctx)
+	local path_param_opt = ctx:get_path_param("user_id")
+	if not path_param_opt.none then
+		kimyo.debug.info(path_param_opt.value)
+	else
+		kimyo.debug.info("no path param named 'user_id'")
+	end
+
+	local query_param_opt = ctx:get_query_param("user_name")
+	if not query_param_opt.none then
+		kimyo.debug.info(query_param_opt.value)
+	else
+		kimyo.debug.info("no query param named 'user_name'")
+	end
+
 	ctx:send_string("users API GET handler")
 	return ctx
 end)
