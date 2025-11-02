@@ -122,7 +122,7 @@ impl Router {
             return Ok(out.res.clone());
         }
         // matching for dynamic route definitions
-        return Ok(self.match_dynamic_route(&mut ctx));
+        return Ok(self.match_dynamic_route(&lua, &mut ctx).await);
     }
     pub fn extract_query_parameters(&self, ctx: &mut context::Context) {
         let req_path = match urlencoding::decode(&ctx.req.path) {
@@ -152,9 +152,85 @@ impl Router {
                 .insert(param_parts.0.to_string(), param_parts.1.to_string());
         }
     }
-    pub fn match_dynamic_route(&self, ctx: &mut context::Context) -> response::Response {
-        ctx.res.status_code = status::HttpStatus::NotFound;
-        ctx.res.clone()
+    pub async fn match_dynamic_route(
+        &self,
+        lua: &Lua,
+        ctx: &mut context::Context,
+    ) -> response::Response {
+        let req_path = match ctx.req.path.strip_prefix("/") {
+            Some(out) => out,
+            None => {
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        let req_path_parts = req_path.split("/").collect::<Vec<&str>>();
+        if req_path_parts.len() == 1 {
+            ctx.res.status_code = status::HttpStatus::NotFound;
+            return ctx.res.clone();
+        }
+
+        let routes = self.routes.read().await;
+        let matched_route = match routes.iter().find(|(route_key, _)| {
+            let route_path = match route_key.path.strip_prefix("/") {
+                Some(out) => out,
+                None => {
+                    return false;
+                }
+            };
+            if req_path_parts.len() == route_path.split("/").collect::<Vec<&str>>().len() {
+                return true;
+            }
+            return false;
+        }) {
+            Some(out) => out,
+            None => {
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        let route_path = match matched_route.0.path.strip_prefix("/") {
+            Some(out) => out,
+            None => {
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        let route_path_parts = route_path.split("/").collect::<Vec<&str>>();
+        for i in 0..route_path_parts.len() {
+            if route_path_parts[i] == req_path_parts[i] {
+                continue;
+            }
+            let path_param_key = route_path_parts[i].trim_matches(|c| c == '{' || c == '}');
+            let path_param_value = req_path_parts[i];
+            ctx.path_params
+                .insert(path_param_key.to_string(), path_param_value.to_string());
+        }
+        let route_handler: LuaFunction = match lua.registry_value(matched_route.1) {
+            Ok(out) => out,
+            Err(e) => {
+                tracing::warn!("(router.rs, 5): {}", e.to_string());
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        let return_value: LuaAnyUserData = match route_handler.call_async(ctx.clone()).await {
+            Ok(out) => out,
+            Err(e) => {
+                tracing::warn!("(router.rs, 6): {}", e.to_string());
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        let out_ctx = match return_value.borrow::<context::Context>() {
+            Ok(out) => out,
+            Err(e) => {
+                tracing::warn!("(router.rs, 7): {}", e.to_string());
+                ctx.res.status_code = status::HttpStatus::NotFound;
+                return ctx.res.clone();
+            }
+        };
+        out_ctx.res.clone()
     }
 }
 

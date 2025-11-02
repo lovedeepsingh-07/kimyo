@@ -19,12 +19,22 @@ impl LuaUserData for Context {
     }
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         // ------ context:get_path_param(param_key)------
-        methods.add_async_method("get_path_param", |lua, _, param_key: String| async move {
-            let option_table = lua.create_table()?;
-            option_table.set("none", false)?;
-            option_table.set("value", param_key)?;
-            Ok(option_table)
-        });
+        methods.add_async_method(
+            "get_path_param",
+            |lua, this, param_key: String| async move {
+                let option_table = lua.create_table()?;
+                let param_value = match this.path_params.get(&param_key) {
+                    Some(out) => out,
+                    None => {
+                        option_table.set("none", true)?;
+                        return Ok(option_table);
+                    }
+                };
+                option_table.set("none", false)?;
+                option_table.set("value", param_value.clone())?;
+                Ok(option_table)
+            },
+        );
         // ------ context:get_query_param_list()------
         methods.add_async_method("get_query_param_list", |lua, this, ()| async move {
             let param_list_table = lua.create_table()?;

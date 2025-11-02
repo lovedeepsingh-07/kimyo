@@ -6,7 +6,7 @@ GET http://localhost:3000/api/users?name=john_doe&age=20 HTTP/1.1
 
 ###
 
-GET http://localhost:3000/api/users/1??name=john_doe&age=20 HTTP/1.1
+GET http://localhost:3000/api/users/john_doe@69.com?name=john_doe&age=20 HTTP/1.1
 
 ###
 

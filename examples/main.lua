@@ -56,11 +56,11 @@ server.router:route("GET", "/api/users/{user_id}", function(ctx)
 		kimyo.debug.info("no path param named 'user_id'")
 	end
 
-	local query_param_opt = ctx:get_query_param("user_name")
+	local query_param_opt = ctx:get_query_param("name")
 	if not query_param_opt.none then
 		kimyo.debug.info(query_param_opt.value)
 	else
-		kimyo.debug.info("no query param named 'user_name'")
+		kimyo.debug.info("no query param named 'name'")
 	end
 
 	ctx:send_string("users API GET handler")
